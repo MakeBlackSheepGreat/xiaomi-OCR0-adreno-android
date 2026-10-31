@@ -66,12 +66,17 @@ python3 /root/xiaomi-ocr/ocr_page.py <图片> --bands 3   # 大图分块
 
 ## 六、模型下载（Release 附件）
 
-本仓库的 Release 里直接提供可用权重（无需自己量化）：
+本仓库的 Release 里直接提供可用权重（无需自己量化）：https://github.com/MakeBlackSheepGreat/xiaomi-OCR0-adreno-android/releases/tag/v1.0.0
 
 | 文件 | 大小 | 说明 |
 | --- | --- | --- |
 | `xiaomi-ocr0-q4_k_m.gguf` | 518 MB | Q4_K_M 量化后的文本模型 |
 | `xiaomi-ocr0-mmproj-f16.gguf` | 198 MB | 视觉投影器（F16，不要量化） |
+
+```bash
+# 下载（约 716 MB）
+gh release download v1.0.0 -R MakeBlackSheepGreat/xiaomi-OCR0-adreno-android -D models
+```
 
 下载放在同一目录后直接启动：
 
