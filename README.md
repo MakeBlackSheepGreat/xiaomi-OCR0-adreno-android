@@ -106,3 +106,8 @@ llama-quantize <bf16-text.gguf> xiaomi-ocr-q4km.gguf Q4_K_M
 ## 八、仓库命名
 
 仓库名 `xiaomi-OCR0-adreno-android`：Xiaomi-OCR-0 + Adreno GPU（自建 Turnip/kgsl）+ Android 宿主环境。
+
+## 九、真实材料验证
+
+《人工智能导论》扫描件三页（150 dpi）：识别 35–40 秒/页，与人工转录相似度 91.6% / 98.7%，
+脚注与引用角标都能识别。详见 `verification/real-pages/REPORT.md`。
