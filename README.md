@@ -64,7 +64,22 @@ python3 /root/xiaomi-ocr/ocr_page.py <图片> --bands 3   # 大图分块
     └── region-mode-failure.txt
 ```
 
-## 六、模型从哪来
+## 六、模型下载（Release 附件）
+
+本仓库的 Release 里直接提供可用权重（无需自己量化）：
+
+| 文件 | 大小 | 说明 |
+| --- | --- | --- |
+| `xiaomi-ocr0-q4_k_m.gguf` | 518 MB | Q4_K_M 量化后的文本模型 |
+| `xiaomi-ocr0-mmproj-f16.gguf` | 198 MB | 视觉投影器（F16，不要量化） |
+
+下载放在同一目录后直接启动：
+
+```bash
+bash scripts/start-llama-server.sh
+```
+
+## 六之二、模型从哪来（自行生成）
 
 仓库里不含模型权重（Q4_K_M 约 518 MB）。两种方式：
 
@@ -82,3 +97,7 @@ llama-quantize <bf16-text.gguf> xiaomi-ocr-q4km.gguf Q4_K_M
 ## 七、一句话总结
 
 在这台骁龙 8 Elite Gen 5 手机上：Q4 + 自建 Turnip(kgsl) GPU 加速后，一页扫描件 OCR 约 18 秒，千字文页约 5 秒；纯 CPU 分别是 143 秒和 101 秒。NPU 仍受限于 Android 权限模型，需要在 Android 端另做程序。
+
+## 八、仓库命名
+
+仓库名 `xiaomi-OCR0-adreno-android`：Xiaomi-OCR-0 + Adreno GPU（自建 Turnip/kgsl）+ Android 宿主环境。
