@@ -1,119 +1,71 @@
-# Xiaomi-OCR-0 本地安装（这台手机）
+# xiaomi-OCR0-adreno-android
 
-按 https://raw.githubusercontent.com/xiaomi-research/Xiaomi-OCR-0/main/SKILL.md 执行的安装结果。
-结论先行：**技能已装好，page 模式的 OCR/KIE/VQA 已用真实图片跑通；region（版面切分）模式在这台机器上不可用。**
+Xiaomi-OCR-0（0.8B OCR 专用 VLM）在**骁龙 8 Elite Gen 5 手机**上的本地部署：Q4 量化 + 自建 **Turnip(kgsl)** 走 Adreno GPU + llama.cpp + DSH MCP 集成。
 
-## 一、装了什么
+## 亮点（全部本机实测）
 
-| 组件 | 状态 | 位置 |
-| --- | --- | --- |
-| xiaomi-ocr 技能（DSH 全局） | ✅ | `/root/.dsh/skills/xiaomi-ocr` → 软链到仓库 |
-| 仓库 checkout | ✅ | `/root/xiaomi-ocr/repo` |
-| MCP Python 环境 | ✅ | `repo/skills/xiaomi-ocr/.venv`（428 MB） |
-| 模型 | ✅ **Q4_K_M，518 MB** | `/root/xiaomi-ocr/xiaomi-ocr-q4km.gguf` |
-| 推理运行时 | ✅ llama.cpp（Vulkan 版）+ CPU 回退 | `llama.cpp/build-vk/bin/llama-server` |
-| **GPU 加速** | ✅ 自建 Turnip(kgsl) → Adreno 840 | `/root/mesa-build/turnip-kgsl.json` |
-| DSH MCP 条目 | ✅ 已配 127.0.0.1:8000 | `profiles/web/cordis.patch.yml` |
-| region（版面切分） | ❌ Paddle 在 proot 里 SIGSEGV | 已删相关依赖 |
+| 项 | 结果 |
+|---|---|
+| 扫描件整页 OCR（707×1000） | **18 s**（CPU 143 s） |
+| 千字文页（510×979） | **5 s**（CPU 101 s） |
+| MCP 端到端单次调用 | **2.0 s**（CPU 105 s） |
+| GPU 推理速度 | 29.6 tok/s（纯文本 34.5 tok/s） |
+| 模型体积 | BF16 1.56 GB → **Q4_K_M 518 MB**（量化 17 秒） |
+| OCRBench（1000 题） | **78.30%**，官方 84.6，差 −6.3（含后端/分辨率/提示词差异，见下） |
 
-## 二、实测（Q4_K_M）
+关键发现：系统自带 Mesa 25.2 的 Turnip 只有 MSM 后端，用不了 Android 的 `/dev/kgsl-3d0`；
+用 Mesa **26.2.4** 以 `-Dfreedreno-kmds=kgsl` 自编后，`vulkaninfo` 直接识别出 `Adreno (TM) 840`。
 
-| 任务 | CPU | GPU(Vulkan/Adreno 840) |
-|---|---|---|
-| 千字文页 510×979 | 101 s | **5 s** |
-| 扫描目录页 707×1000 | 143 s | **18 s（29.6 tok/s）** |
-| MCP 端到端（千字文） | 105 s | **2.0 s** |
-| 小票字段抽取（KIE） | 92.8 s | 未单测，预计 <10 s |
-
-识别内容与仓库标准答案一致（千字文逐字对；目录页章节页码对）。
-
-## 三、怎么用
+## 快速开始
 
 ```bash
-bash /root/xiaomi-ocr/start-llama-server.sh        # GPU（Turnip）
-bash /root/xiaomi-ocr/start-llama-server.sh --cpu  # 纯 CPU 回退
-```
-
-DSH 重启后 `mcp__xiaomi-ocr__*` 四个工具即可用；也可以直接调：
-
-```bash
-python3 /root/xiaomi-ocr/ocr.py <图片> [max_tokens]
-python3 /root/xiaomi-ocr/ocr_page.py <图片> --bands 3   # 大图分块
-```
-
-## 四、限制
-
-1. GPU 依赖自建 Mesa：启动前必须 `export VK_ICD_FILENAMES=/root/mesa-build/turnip-kgsl.json`（脚本已内置）。
-2. 模型走 GPU 时占共享内存，可用内存从 4.3 GB 降到 3.4 GB。
-3. NPU 在 proot 里仍不可用：`/dev/fastrpc-cdsp` 是 EACCES、`/vendor` 未挂载；要用 NPU 得做 Android 端程序。
-4. region 模式因 Paddle 段错误不可用，只用 `mode="page"`。
-5. Ollama BF16 与 HF 数值不等价（仓库 OLLAMA.md 自述）；现在用 llama.cpp 直接跑 GGUF。
-
-## 五、目录
-
-```
-/sdcard/projects/xiaomi-ocr/
-├── README.md
-├── SKILL.md
-├── start-ollama.sh（旧，已不用）
-├── notes/
-│   ├── backend-research.md      # 后端选型调研
-│   └── gpu-turnip-kgsl.md       # GPU 加速完整复现步骤
-└── verification/
-    ├── page-ocr.md / kie.json / vqa.json
-    └── region-mode-failure.txt
-```
-
-## 六、模型下载（Release 附件）
-
-本仓库的 Release 里直接提供可用权重（无需自己量化）：https://github.com/MakeBlackSheepGreat/xiaomi-OCR0-adreno-android/releases/tag/v1.0.0
-
-| 文件 | 大小 | 说明 |
-| --- | --- | --- |
-| `xiaomi-ocr0-q4_k_m.gguf` | 518 MB | Q4_K_M 量化后的文本模型 |
-| `xiaomi-ocr0-mmproj-f16.gguf` | 198 MB | 视觉投影器（F16，不要量化） |
-
-```bash
-# 下载（约 716 MB）
-gh release download v1.0.0 -R MakeBlackSheepGreat/xiaomi-OCR0-adreno-android -D models
-```
-
-下载放在同一目录后直接启动：
-
-```bash
+# 1. 起服务（GPU；没有 Turnip 时用 --cpu）
 bash scripts/start-llama-server.sh
+
+# 2. 单图 OCR
+python3 scripts/ocr.py page.png
+
+# 3. 大图分块
+python3 scripts/ocr_page.py big_page.png --bands 3 --out out.md
 ```
 
-## 六之二、模型从哪来（自行生成）
+模型获取：`gh release download v1.0.0 -R MakeBlackSheepGreat/xiaomi-OCR0-adreno-android -D models`，
+或直接用仓库 `models/` 下的 LFS 文件。
 
-仓库里不含模型权重（Q4_K_M 约 518 MB）。两种方式：
+## 文档
 
-```bash
-# 方式 A：直接拉社区 GGUF（ollama 格式）
-ollama pull longwayxu/xiaomi-ocr-0:bf16
+| 文档 | 内容 |
+|---|---|
+| [docs/environment.md](docs/environment.md) | 实际环境：SoC/GPU/NPU、内核、版本、磁盘、镜像源、限制 |
+| [docs/code.md](docs/code.md) | 数据流、脚本逐个说明、MCP 配置、已知问题 |
+| [docs/benchmark-ocrbench.md](docs/benchmark-ocrbench.md) | OCRBench 测法、结果、**8 条局限性** |
+| [notes/gpu-turnip-kgsl.md](notes/gpu-turnip-kgsl.md) | GPU 加速完整复现步骤 |
+| [notes/backend-research.md](notes/backend-research.md) | 后端选型调研（SGLang/vLLM/Ollama/Paddle） |
+| [verification/real-pages/REPORT.md](verification/real-pages/REPORT.md) | 真实扫描书页验证（91.6% / 98.7%） |
 
-# 方式 B：自己量化（本机做法）
-# 从 ollama blobs 里取出 BF16 文本 GGUF 与 projector，然后：
-llama-quantize <bf16-text.gguf> xiaomi-ocr-q4km.gguf Q4_K_M
+## 仓库结构
+
+```text
+├── docs/                 环境、代码、评测文档
+├── models/               LFS：Q4_K_M 518 MB + mmproj 197 MB
+├── notes/                后端调研与 GPU 复现
+├── scripts/              启动、OCR、构建、评测脚本
+├── verification/         实测输出与标准答案对照
+│   └── ocrbench/         1000 题逐题结果
+└── SKILL.md              官方安装说明（存档）
 ```
 
-本项目用方式 B：BF16 1.56 GB → Q4_K_M 518 MB，量化耗时 17 秒，识别质量基本无损。
+## 局限（先看这段）
 
-## 七、一句话总结
+- **NPU 用不了**：`/dev/fastrpc-cdsp` EACCES、`/vendor` 未挂载，QNN 只能在 Android 应用进程里跑。
+- **region 模式不可用**：PaddlePaddle 3.2.2 在本机 ARM64 proot 下 `predict` 段错误。
+- **GPU 显存有限**：8192 上下文 + 2048px 图像会 `device lost`；建议 ≤4096 上下文、≤1600px。
+- **78.30% 不是纯量化损失**：没跑 BF16 对照，差值混合了后端、分辨率、提示词、计分口径。**仅供参考。**
 
-在这台骁龙 8 Elite Gen 5 手机上：Q4 + 自建 Turnip(kgsl) GPU 加速后，一页扫描件 OCR 约 18 秒，千字文页约 5 秒；纯 CPU 分别是 143 秒和 101 秒。NPU 仍受限于 Android 权限模型，需要在 Android 端另做程序。
+## 致谢与许可
 
-## 八、仓库命名
-
-仓库名 `xiaomi-OCR0-adreno-android`：Xiaomi-OCR-0 + Adreno GPU（自建 Turnip/kgsl）+ Android 宿主环境。
-
-## 九、真实材料验证
-
-《人工智能导论》扫描件三页（150 dpi）：识别 35–40 秒/页，与人工转录相似度 91.6% / 98.7%，
-脚注与引用角标都能识别。详见 `verification/real-pages/REPORT.md`。
-
-## 十、OCRBench 实测（本机设置 vs 官方）
-
-本机 Q4_K_M + Adreno GPU + llama.cpp：**78.30%**（数学感知计分）/ 75.90%（严格计分），官方 BF16+vLLM：**84.6**，差 **−6.3**。
-印刷体类 94–98% 基本无损；损失在 Doc VQA（70%）、KIE（78%）、手写公式（63%），主要来自 1024px 降采样与 GPU 显存限制。
-详见 `verification/ocrbench/report.md`。
+- 模型：[SeerRay-Lab/Xiaomi-OCR-0](https://huggingface.co/SeerRay-Lab/Xiaomi-OCR-0)（权重许可见其仓库）
+- 运行时：[ggml-org/llama.cpp](https://github.com/ggml-org/llama.cpp)（MIT）
+- GPU 驱动：[Mesa3D](https://gitlab.freedesktop.org/mesa/mesa)（MIT）
+- 数据集：[echo840/OCRBench](https://huggingface.co/datasets/echo840/OCRBench)
+- 本仓库脚本：MIT（见 [LICENSE](LICENSE)）
