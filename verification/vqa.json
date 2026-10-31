@@ -1,0 +1,8 @@
+{
+  "tool": "vqa_image",
+  "image": "receipt_small.jpg",
+  "question": "What is the total amount paid?",
+  "elapsed_seconds": 5.7,
+  "isError": null,
+  "answer": "RM 5.90"
+}

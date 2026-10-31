@@ -1,0 +1,16 @@
+region 模式（mode="region"，PP-DocLayoutV3）在本机不可用。
+
+已完成的步骤：
+1. MCP 环境安装 paddlepaddle 3.2.2 (manylinux2014_aarch64) + paddlex[cv] 3.7.2 —— 成功，可 import。
+2. PP-DocLayoutV3 权重已下载到 /root/.paddlex/official_models/PP-DocLayoutV3 —— 成功。
+3. pdx.create_model("PP-DocLayoutV3", device="cpu") —— 成功（缓存后 3.9 s）。
+4. m.predict(...) —— Paddle 原生层 SIGSEGV 崩溃：
+
+   FatalError: 'Segmentation fault' is detected by the operating system.
+   [SignalInfo: *** SIGSEGV (@0x0) received by PID ... ***]
+
+同样在 enable_mkldnn=False 下复现，说明不是 oneDNN 路径问题，而是 PaddlePaddle 3.2.2 在这台
+ARM64 + proot（无特权）环境里推理即崩溃。
+
+影响：只影响 region 模式。page 模式的 ocr_image / ocr_pdf、kie_image、vqa_image 不受影响，均已实测通过。
+若要 region：需要在 root 原生 Linux + 可用的 Paddle 运行时（或换 x86 机器）重装。

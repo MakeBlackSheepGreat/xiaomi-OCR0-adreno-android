@@ -1,0 +1,17 @@
+{
+  "tool": "kie_image",
+  "image": "receipt_small.jpg (397x700, 由 example_pics/receipt.jpg 缩放)",
+  "fields": ["merchant", "date", "total"],
+  "elapsed_seconds": 92.8,
+  "isError": null,
+  "json": {
+    "merchant": "MR.D.I.Y.SDN BHD",
+    "date": "2017-10-18",
+    "total": "RM 5.90"
+  },
+  "ground_truth_check": {
+    "merchant": "receipt.md 首行 MR. D.I.Y. SDN BHD —— 一致",
+    "date": "receipt.md 内含 18-10-17 15:16（另有 2017-10-18 交易日期），格式归一为 2017-10-18",
+    "total": "与 VQA/小票合计一致 (RM 5.90)"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "file_format_version": "1.0.1",
+  "ICD": {
+    "api_version": "1.4.354",
+    "library_path": "/root/mesa-build/mesa-26.2.4/build-kgsl/src/freedreno/vulkan/libvulkan_freedreno.so"
+  }
+}
