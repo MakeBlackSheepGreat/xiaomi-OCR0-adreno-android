@@ -111,3 +111,9 @@ llama-quantize <bf16-text.gguf> xiaomi-ocr-q4km.gguf Q4_K_M
 
 《人工智能导论》扫描件三页（150 dpi）：识别 35–40 秒/页，与人工转录相似度 91.6% / 98.7%，
 脚注与引用角标都能识别。详见 `verification/real-pages/REPORT.md`。
+
+## 十、OCRBench 实测（本机设置 vs 官方）
+
+本机 Q4_K_M + Adreno GPU + llama.cpp：**78.30%**（数学感知计分）/ 75.90%（严格计分），官方 BF16+vLLM：**84.6**，差 **−6.3**。
+印刷体类 94–98% 基本无损；损失在 Doc VQA（70%）、KIE（78%）、手写公式（63%），主要来自 1024px 降采样与 GPU 显存限制。
+详见 `verification/ocrbench/report.md`。
